@@ -140,7 +140,10 @@
       // Intercept form submission
       const form = inputEl.closest('form');
       if (form) {
-        form.addEventListener('submit', (e) => handleSubmit(e, inputEl), true);
+        form.addEventListener('submit', (e) => {
+          if (e.__ps_triggered) return;
+          handleSubmit(e, inputEl);
+        }, true);
       }
 
       // Intercept send button click
@@ -148,7 +151,10 @@
         const sendBtn = platform.getSendButton();
         if (sendBtn && !sendBtn.__ps_attached) {
           sendBtn.__ps_attached = true;
-          sendBtn.addEventListener('click', (e) => handleSubmit(e, inputEl), true);
+          sendBtn.addEventListener('click', (e) => {
+            if (e.__ps_triggered) return;
+            handleSubmit(e, inputEl);
+          }, true);
         }
       };
       checkSendButton();
@@ -157,6 +163,7 @@
 
       // Intercept Enter key
       inputEl.addEventListener('keydown', (e) => {
+        if (e.__ps_triggered) return;
         if (e.key === 'Enter' && !e.shiftKey) {
           handleSubmit(e, inputEl);
         }
@@ -168,12 +175,32 @@
     // ═══════════════════════════════════════
     // SCAN & UPDATE
     // ═══════════════════════════════════════
-    async function scanAndUpdate(text, inputEl) {
+    let extensionDead = false;
+
+    function isExtensionAlive() {
       try {
+        return !!chrome.runtime?.id;
+      } catch (e) {
+        return false;
+      }
+    }
+
+    async function scanAndUpdate(text, inputEl) {
+      if (extensionDead) return;
+
+      try {
+        if (!isExtensionAlive()) {
+          extensionDead = true;
+          console.warn('[PromptShield] Extension context invalidated — please refresh the page');
+          if (shieldBadge) shieldBadge.remove();
+          return;
+        }
+
         const result = await chrome.runtime.sendMessage({
           type: 'SCAN_PROMPT',
           text,
           platform: platform.id,
+          isSubmit: false, // Real-time scan — firewall only, NO Gemini
         });
 
         if (!result || result.skipped) return;
@@ -195,30 +222,95 @@
           document.querySelectorAll('.ps-xray-tooltip').forEach(el => el.remove());
         }
       } catch (e) {
-        console.error('[PromptShield] Scan error:', e);
+        if (e.message?.includes('Extension context invalidated') || e.message?.includes('Receiving end does not exist')) {
+          extensionDead = true;
+          console.warn('[PromptShield] Extension was reloaded — please refresh the page');
+          if (shieldBadge) shieldBadge.remove();
+        } else {
+          console.error('[PromptShield] Scan error:', e.message);
+        }
       }
     }
 
     // ═══════════════════════════════════════
     // SUBMIT HANDLER
     // ═══════════════════════════════════════
-    function handleSubmit(e, inputEl) {
-      if (!lastScanResult || lastScanResult.riskScore < 31) return; // Allow safe prompts
+    let isSubmitting = false;
 
-      const blockThreshold = settings.blockMode === 'block' ? 31 : 81;
+    async function handleSubmit(e, inputEl) {
+      if (extensionDead || isSubmitting) return;
 
-      if (lastScanResult.riskScore >= blockThreshold) {
-        e.preventDefault();
-        e.stopPropagation();
-        e.stopImmediatePropagation();
+      const text = platform.getPromptText(inputEl);
+      if (!text || text.trim().length < 3) return;
 
-        showWarningOverlay(inputEl, lastScanResult);
+      // Always block the initial default submission so we can do a final synchronous check
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
 
-        // Play sound
-        if (settings.soundEnabled) {
-          playShieldSound();
+      isSubmitting = true;
+      updateShieldBadge('medium'); // Show processing state
+
+      try {
+        // Do one final scan — this one triggers Gemini AI analysis
+        console.log('[PromptShield] Submit scan — calling Gemini...');
+        const result = await chrome.runtime.sendMessage({
+          type: 'SCAN_PROMPT',
+          text,
+          platform: platform.id,
+          isSubmit: true, // Submit scan — triggers Gemini
+        });
+
+        if (!result || result.skipped) {
+          allowSubmit(inputEl);
+          return;
         }
+
+        lastScanResult = result;
+        const blockThreshold = settings.blockMode === 'block' ? 31 : 81;
+
+        if (result.riskScore >= blockThreshold) {
+          // Blocked!
+          updateShieldBadge('critical');
+          showWarningOverlay(inputEl, result);
+          if (settings.soundEnabled) playShieldSound();
+          isSubmitting = false;
+        } else {
+          // Allowed!
+          updateShieldBadge('safe');
+          allowSubmit(inputEl);
+        }
+      } catch (err) {
+        console.error('[PromptShield] Submit scan failed:', err);
+        allowSubmit(inputEl); // Fail open
       }
+    }
+
+    function allowSubmit(inputEl) {
+      isSubmitting = false;
+      const sendBtn = platform.getSendButton();
+      
+      if (sendBtn) {
+        // Try button click with bypass flag
+        const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true });
+        clickEvent.__ps_triggered = true;
+        sendBtn.dispatchEvent(clickEvent);
+      }
+
+      // Try Enter key with bypass flag (React fallback)
+      const enterEvent = new KeyboardEvent('keydown', {
+        key: 'Enter',
+        code: 'Enter',
+        keyCode: 13,
+        which: 13,
+        bubbles: true,
+        cancelable: true
+      });
+      enterEvent.__ps_triggered = true;
+      inputEl.dispatchEvent(enterEvent);
+      
+      // Clear interval timer if it exists
+      clearOverlay();
     }
 
     // ═══════════════════════════════════════
@@ -253,6 +345,19 @@
             `).join('')}
             ${scanResult.findings.length > 5 ? `<div class="ps-finding-more">+${scanResult.findings.length - 5} more</div>` : ''}
           </div>
+
+          ${scanResult.executionDecision ? `
+          <div class="ps-execution-plan">
+            <div class="ps-findings-title">⚡ Execution Plan (${scanResult.executionDecision.overallDecision})</div>
+            ${scanResult.executionDecision.results.slice(0, 4).map(r => `
+              <div class="ps-finding-item">
+                <span class="ps-finding-dot" style="background: ${r.allowed ? '#22c55e' : '#ef4444'}"></span>
+                <span class="ps-finding-label">${r.allowed ? '✅' : '🚫'} ${r.tool}</span>
+                <span class="ps-finding-value">${truncate(r.reason, 35)}</span>
+              </div>
+            `).join('')}
+          </div>
+          ` : ''}
 
           <div class="ps-actions">
             <button class="ps-btn ps-btn-block" id="ps-block">Block</button>
@@ -301,9 +406,8 @@
       overlay.querySelector('#ps-allow').addEventListener('click', () => {
         lastScanResult = null;
         clearOverlay();
-        // Re-trigger send
-        const sendBtn = platform.getSendButton();
-        if (sendBtn) setTimeout(() => sendBtn.click(), 100);
+        // Use allowSubmit which sets bypass flag — won't get intercepted again
+        allowSubmit(inputEl);
       });
     }
 

@@ -91,13 +91,65 @@ async function handleScanPrompt(message, sender, settings) {
     return { skipped: true, reason: 'Empty input' };
   }
 
-  // ── Step 1: Prompt Firewall ─────────────
+  // ── Step 1: Prompt Firewall (instant, ~30ms) ──
   const scanResult = PS.scanPrompt(text, {
     enableMasking: settings.autoMask,
     sensitivity: settings.sensitivity,
   });
 
-  PS.log(`Scan complete: score=${scanResult.riskScore}, findings=${scanResult.findings.length}, time=${scanResult.metadata.scanTime}ms`);
+  PS.log(`Firewall scan: score=${scanResult.riskScore}, findings=${scanResult.findings.length}, time=${scanResult.metadata.scanTime}ms`);
+
+  // ── Step 2: Gemini AI Analysis (ONLY on submit, not while typing) ──
+  let executionPlan = null;
+  let executionDecision = null;
+
+  if (settings.geminiApiKey && message.isSubmit) {
+    try {
+      PS.log('🚀 SUBMIT detected — calling Gemini AI for execution plan analysis...');
+      const geminiResult = await PS.analyzeWithGemini(text, settings.geminiApiKey);
+
+      if (geminiResult && geminiResult.plan) {
+        // Parse the tool plan
+        const parsed = PS.parseToolPlan(geminiResult);
+        PS.log(`Gemini plan: ${parsed.stepCount} steps, risk=${geminiResult.riskAssessment}`);
+
+        if (parsed.valid && parsed.steps.length > 0) {
+          // Evaluate each step with Fallback Guard (or ArmorClaw if available)
+          executionPlan = parsed;
+          executionDecision = await PS.decidePlan(parsed.steps, settings);
+          PS.log(`Execution decision: ${executionDecision.overallDecision} (${executionDecision.summary.allowed} allowed, ${executionDecision.summary.blocked} blocked)`);
+
+          // Boost risk score if dangerous actions detected — ensure overlay shows
+          if (executionDecision.overallDecision === 'BLOCK') {
+            scanResult.riskScore = Math.max(scanResult.riskScore, 90);
+            scanResult.riskLevel = PS.getRiskLevel(scanResult.riskScore);
+          } else if (executionDecision.overallDecision === 'PARTIAL') {
+            scanResult.riskScore = Math.max(scanResult.riskScore, 85);
+            scanResult.riskLevel = PS.getRiskLevel(scanResult.riskScore);
+          }
+
+          // Log execution decisions to audit
+          for (const result of executionDecision.results) {
+            await PS.addAuditEntry({
+              type: 'execution_decision',
+              tool: result.step?.tool || 'unknown',
+              decision: result.allowed ? 'ALLOW' : 'BLOCK',
+              reason: result.reason,
+              riskLevel: result.riskLevel,
+              source: result.source || 'fallback_guard',
+            });
+          }
+        }
+      }
+    } catch (err) {
+      PS.warn('Gemini analysis failed (non-blocking):', err.message);
+      // Firewall result still valid — Gemini is optional
+    }
+  } else if (!message.isSubmit) {
+    PS.log('⌨️ Real-time typing scan — firewall only (Gemini skipped to save quota)');
+  } else {
+    PS.log('⚠️ Gemini SKIPPED: No API key configured. Set it in popup → Settings → API Keys.');
+  }
 
   // ── Update badge ────────────────────────
   updateBadge(scanResult.riskScore);
@@ -113,6 +165,8 @@ async function handleScanPrompt(message, sender, settings) {
     categories: scanResult.categories,
     summary: scanResult.summary.text,
     scanTime: scanResult.metadata.scanTime,
+    geminiUsed: !!settings.geminiApiKey,
+    executionDecision: executionDecision?.overallDecision || null,
   };
 
   await saveToHistory(historyEntry);
@@ -129,11 +183,30 @@ async function handleScanPrompt(message, sender, settings) {
       source: f.source,
     })),
     decision: scanResult.riskScore >= 81 ? 'CRITICAL' : scanResult.riskScore >= 61 ? 'HIGH' : 'SCANNED',
+    geminiUsed: !!settings.geminiApiKey,
   });
 
   return {
     type: PS.MSG.SCAN_RESULT,
     ...scanResult,
+    // Attach execution plan data for the content script overlay
+    executionPlan: executionPlan ? {
+      steps: executionPlan.steps,
+      summary: executionPlan.summary,
+      riskAssessment: executionPlan.riskAssessment,
+    } : null,
+    executionDecision: executionDecision ? {
+      overallDecision: executionDecision.overallDecision,
+      results: executionDecision.results.map(r => ({
+        tool: r.step?.tool || 'unknown',
+        args: r.step?.args || {},
+        allowed: r.allowed,
+        reason: r.reason,
+        riskLevel: r.riskLevel,
+        source: r.source,
+      })),
+      summary: executionDecision.summary,
+    } : null,
   };
 }
 
@@ -253,3 +326,14 @@ function generateId() {
 }
 
 PS.log('Service worker loaded');
+
+// Startup diagnostics — prints key config to service worker console
+getSettings().then(s => {
+  PS.log('─── PromptShield Startup Diagnostics ───');
+  PS.log('  Shield enabled:', s.enabled);
+  PS.log('  Gemini API key:', s.geminiApiKey ? '✅ SET (' + s.geminiApiKey.substring(0, 8) + '...)' : '❌ NOT SET');
+  PS.log('  ArmorClaw key:', s.armorClawApiKey ? '✅ SET' : '❌ NOT SET');
+  PS.log('  Block mode:', s.blockMode);
+  PS.log('  Sensitivity:', s.sensitivity);
+  PS.log('────────────────────────────────────────');
+});

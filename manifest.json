@@ -65,7 +65,8 @@
     "https://chatgpt.com/*",
     "https://gemini.google.com/*",
     "https://copilot.microsoft.com/*",
-    "https://claude.ai/*"
+    "https://claude.ai/*",
+    "https://generativelanguage.googleapis.com/*"
   ],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'"

@@ -122,6 +122,7 @@
   flex: 1;
   background: linear-gradient(135deg, #f1f5f9, #94a3b8);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -356,3 +357,20 @@
   padding: 1px 4px;
   border-radius: 4px;
 }
+
+.ps-xray-more {
+  font-size: 10px;
+  color: #64748b;
+  padding: 3px 0;
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════ */
+/* EXECUTION PLAN (Gemini Results)        */
+/* ═══════════════════════════════════════ */
+.ps-execution-plan {
+  margin-bottom: 14px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+

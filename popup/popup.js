@@ -105,9 +105,16 @@ async function loadStatus() {
 
     // API status
     const apis = [];
-    if (response.geminiAvailable) apis.push('G');
-    if (response.armorClawAvailable) apis.push('A');
-    document.getElementById('api-status').textContent = apis.length > 0 ? apis.join('+') : 'None';
+    if (response.geminiAvailable) apis.push('Gemini ✅');
+    if (response.armorClawAvailable) apis.push('ArmorClaw ✅');
+    const apiEl = document.getElementById('api-status');
+    if (apis.length > 0) {
+      apiEl.textContent = apis.length.toString();
+      apiEl.title = apis.join(', ');
+    } else {
+      apiEl.textContent = 'None';
+      apiEl.title = 'No API keys configured — using local firewall only';
+    }
 
     // Update gauge with last scan
     if (response.lastScan) {

@@ -14,7 +14,8 @@ async function analyzeWithGemini(text, apiKey) {
 
   // Real Gemini API call (enable when key arrives)
   try {
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
+    PS.log('Sending request to Gemini API...');
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=${apiKey}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -24,8 +25,15 @@ async function analyzeWithGemini(text, apiKey) {
     });
 
     const data = await response.json();
+    PS.log('Gemini raw response:', JSON.stringify(data).substring(0, 500) + '...');
+    
+    if (data.error) {
+      throw new Error(data.error.message || 'Gemini API returned an error');
+    }
+
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text;
     if (content) return JSON.parse(content);
+    
     throw new Error('Empty response from Gemini');
   } catch (err) {
     PS.warn('Gemini API error, using mock:', err.message);

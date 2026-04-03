@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=400, initial-scale=1.0">
+  <title>PromptShield</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <span class="logo">🛡️</span>
+        <div class="header-text">
+          <h1 class="title">PromptShield</h1>
+          <p class="subtitle">AI Security Firewall</p>
+        </div>
+      </div>
+      <label class="toggle" id="shield-toggle">
+        <input type="checkbox" id="shield-enabled" checked>
+        <span class="toggle-slider"></span>
+      </label>
+    </header>
+
+    <!-- Risk Gauge -->
+    <section class="gauge-section" id="gauge-section">
+      <svg class="gauge-svg" viewBox="0 0 120 120">
+        <circle class="gauge-bg" cx="60" cy="60" r="50" />
+        <circle class="gauge-fill" id="gauge-fill" cx="60" cy="60" r="50" />
+      </svg>
+      <div class="gauge-center">
+        <span class="gauge-score" id="gauge-score">0</span>
+        <span class="gauge-label" id="gauge-label">Safe</span>
+      </div>
+      <div class="gauge-details" id="gauge-details">
+        <span class="gauge-time" id="gauge-time">—</span>
+        <span class="gauge-platform" id="gauge-platform">—</span>
+      </div>
+    </section>
+
+    <!-- Status Cards -->
+    <section class="status-cards">
+      <div class="status-card" id="card-scans">
+        <div class="card-icon">📊</div>
+        <div class="card-value" id="total-scans">0</div>
+        <div class="card-label">Scans</div>
+      </div>
+      <div class="status-card" id="card-blocked">
+        <div class="card-icon">🚫</div>
+        <div class="card-value" id="total-blocked">0</div>
+        <div class="card-label">Blocked</div>
+      </div>
+      <div class="status-card" id="card-apis">
+        <div class="card-icon">🔌</div>
+        <div class="card-value" id="api-status">—</div>
+        <div class="card-label">APIs</div>
+      </div>
+    </section>
+
+    <!-- Tabs -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="history">History</button>
+      <button class="tab" data-tab="audit">Audit Log</button>
+      <button class="tab" data-tab="settings">Settings</button>
+    </nav>
+
+    <!-- History Panel -->
+    <section class="panel active" id="panel-history">
+      <div class="panel-header">
+        <h3>Recent Scans</h3>
+        <button class="btn-text" id="clear-history">Clear</button>
+      </div>
+      <div class="scan-list" id="scan-list">
+        <div class="empty-state">
+          <span class="empty-icon">🔍</span>
+          <p>No scans yet. Visit an AI platform to start.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Audit Panel -->
+    <section class="panel" id="panel-audit">
+      <div class="panel-header">
+        <h3>Audit Trail</h3>
+        <button class="btn-icon" id="export-audit" title="Export JSON">📥</button>
+      </div>
+      <div class="audit-list" id="audit-list">
+        <div class="empty-state">
+          <span class="empty-icon">📋</span>
+          <p>No audit entries yet.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Settings Panel -->
+    <section class="panel" id="panel-settings">
+      <div class="settings-group">
+        <h3 class="settings-title">Protection</h3>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Auto-Mask Secrets</span>
+            <span class="setting-desc">Replace secrets with *** before sending</span>
+          </div>
+          <label class="toggle small">
+            <input type="checkbox" id="setting-automask">
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Block Mode</span>
+            <span class="setting-desc">How to handle risky prompts</span>
+          </div>
+          <select id="setting-blockmode" class="setting-select">
+            <option value="warn">Warn</option>
+            <option value="block">Block</option>
+            <option value="allow">Allow All</option>
+          </select>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Sensitivity</span>
+            <span class="setting-desc">Detection sensitivity level</span>
+          </div>
+          <div class="sensitivity-control">
+            <input type="range" id="setting-sensitivity" min="1" max="5" value="3" class="slider">
+            <span class="sensitivity-label" id="sensitivity-label">Standard</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-title">Experience</h3>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Sound Effects</span>
+            <span class="setting-desc">Play sound on threat detection</span>
+          </div>
+          <label class="toggle small">
+            <input type="checkbox" id="setting-sound" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">X-Ray Mode</span>
+            <span class="setting-desc">Highlight detected secrets inline</span>
+          </div>
+          <label class="toggle small">
+            <input type="checkbox" id="setting-xray" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-title">API Keys</h3>
+
+        <div class="setting-row vertical">
+          <div class="setting-info">
+            <span class="setting-label">Gemini API Key</span>
+            <span class="setting-desc">Enable AI reasoning engine</span>
+          </div>
+          <input type="password" id="setting-gemini-key" class="setting-input" placeholder="Enter Gemini API key...">
+        </div>
+
+        <div class="setting-row vertical">
+          <div class="setting-info">
+            <span class="setting-label">ArmorClaw API Key</span>
+            <span class="setting-desc">Enable token verification</span>
+          </div>
+          <input type="password" id="setting-armorclaw-key" class="setting-input" placeholder="Enter ArmorClaw API key...">
+        </div>
+
+        <button class="btn-primary" id="save-keys">Save API Keys</button>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>PromptShield v1.0.0</span>
+      <span class="footer-dot">•</span>
+      <span>HackByte 2026</span>
+    </footer>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

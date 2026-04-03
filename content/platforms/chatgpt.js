@@ -11,16 +11,18 @@ window.__PROMPTSHIELD_PLATFORM__ = {
   selectors: {
     inputField: [
       '#prompt-textarea',
+      'div[id="prompt-textarea"]',
       'div[contenteditable="true"][data-placeholder]',
       'div.ProseMirror[contenteditable="true"]',
       'textarea[data-id="root"]',
-      'div[id="prompt-textarea"]',
+      'div[contenteditable="true"]',
     ],
     sendButton: [
       'button[data-testid="send-button"]',
       'button[aria-label="Send prompt"]',
       'button[aria-label="Send message"]',
       'form button[type="submit"]',
+      'button[data-testid="fruitjuice-send-button"]',
     ],
     chatContainer: [
       'main',
@@ -47,7 +49,7 @@ window.__PROMPTSHIELD_PLATFORM__ = {
   getPromptText(inputEl) {
     if (!inputEl) return '';
     // ContentEditable divs
-    if (inputEl.contentEditable === 'true') {
+    if (inputEl.contentEditable === 'true' || inputEl.tagName !== 'TEXTAREA') {
       return inputEl.innerText || inputEl.textContent || '';
     }
     // Textarea
@@ -56,7 +58,7 @@ window.__PROMPTSHIELD_PLATFORM__ = {
 
   setPromptText(inputEl, text) {
     if (!inputEl) return;
-    if (inputEl.contentEditable === 'true') {
+    if (inputEl.contentEditable === 'true' || inputEl.tagName !== 'TEXTAREA') {
       inputEl.innerText = text;
       // Trigger React's synthetic events
       inputEl.dispatchEvent(new Event('input', { bubbles: true }));

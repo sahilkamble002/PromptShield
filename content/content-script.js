@@ -356,6 +356,12 @@
                 <span class="ps-finding-value">${truncate(r.reason, 35)}</span>
               </div>
             `).join('')}
+            ${scanResult.executionDecision.intentTokenId ? `
+              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid #334155; font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between;">
+                <span title="Generated via Web Crypto SHA-256">🔐 Token: <code style="color:#60a5fa">${scanResult.executionDecision.intentTokenId}</code></span>
+                <span style="color: ${scanResult.executionDecision.overallDecision === 'ALLOW' ? '#22c55e' : '#ef4444'}">${scanResult.executionDecision.overallDecision === 'ALLOW' ? 'Verified' : 'Rejected'}</span>
+              </div>
+            ` : ''}
           </div>
           ` : ''}
 
@@ -404,6 +410,12 @@
         clearOverlay();
       });
       overlay.querySelector('#ps-allow').addEventListener('click', () => {
+        // Send explicit audit log for user override
+        chrome.runtime.sendMessage({ 
+          type: 'LOG_AUDIT', 
+          entry: { type: 'manual_override', override: true, timestamp: Date.now(), platform: window.location.hostname } 
+        });
+
         lastScanResult = null;
         clearOverlay();
         // Use allowSubmit which sets bypass flag — won't get intercepted again

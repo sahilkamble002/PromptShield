@@ -202,17 +202,18 @@ node tests/fallback.test.js      # Fallback guard decisions
 5. Test settings toggles (mask on/off, block behavior)
 
 ### Demo Readiness Checklist
-- [ ] Extension loads without errors
-- [ ] Shield icon appears on all 4 platforms
-- [ ] Firewall detects API keys, passwords, .env values
-- [ ] X-Ray mode highlights secrets with colors
-- [ ] Risk gauge animates correctly
-- [ ] Sound plays on block
-- [ ] Audit log shows all decisions
-- [ ] Export to JSON works
-- [ ] Settings persist across sessions
-- [ ] Fallback guard blocks dangerous paths
-- [ ] ArmorClaw mock returns expected responses
+- [x] Extension loads without errors
+- [x] Shield icon appears on all 4 platforms
+- [x] Firewall detects API keys, passwords, .env values
+- [x] X-Ray mode highlights secrets with colors
+- [x] Risk gauge animates correctly
+- [x] Sound plays on block
+- [x] Audit log shows all decisions
+- [x] Export to JSON works
+- [x] Settings persist across sessions
+- [x] Fallback guard blocks dangerous paths
+- [x] ArmorClaw mock returns expected responses
+- [x] ArmorClaw LIVE API Integration returning verified intent tokens
 
 ---
 

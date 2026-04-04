@@ -73,6 +73,10 @@ async function handleMessage(message, sender) {
     case PS.MSG.EXECUTE_PLAN:
       return handleExecutePlan(message.plan, settings);
 
+    case 'LOG_AUDIT':
+      await PS.addAuditEntry(message.entry);
+      return { success: true };
+
     default:
       return { error: `Unknown message type: ${message.type}` };
   }
@@ -197,6 +201,8 @@ async function handleScanPrompt(message, sender, settings) {
     } : null,
     executionDecision: executionDecision ? {
       overallDecision: executionDecision.overallDecision,
+      intentTokenId: executionDecision.intentTokenId,
+      verificationMethod: executionDecision.verificationMethod,
       results: executionDecision.results.map(r => ({
         tool: r.step?.tool || 'unknown',
         args: r.step?.args || {},

@@ -16,6 +16,7 @@ async function decidePlan(plan, settings) {
     userId: settings?.armoriqUserId || 'promptshield-user',
     agentId: settings?.armoriqAgentId || 'promptshield-agent',
     proxyEndpoint: settings?.armoriqProxyEndpoint || 'https://customer-proxy.armoriq.ai',
+    mode: settings?.armoriqMode || 'mock',
   };
 
   const armorIQ = new PS.ArmorClawClient(armorConfig);

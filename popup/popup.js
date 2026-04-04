@@ -316,8 +316,16 @@ function setupEventListeners() {
   document.getElementById('test-armoriq').addEventListener('click', async () => {
     const statusEl = document.getElementById('armoriq-status');
     const mode = document.getElementById('setting-armoriq-mode').value || 'mock';
+    const apiKey = document.getElementById('setting-armorclaw-key').value.trim();
 
-    statusEl.innerHTML = '<span style="color:#f59e0b">⏳ Running ArmorIQ pipeline test...</span>';
+    // Warn if live mode without API key
+    if (mode === 'live' && !apiKey) {
+      statusEl.innerHTML = '<span style="color:#f59e0b">⚠️ Live mode requires an ArmorIQ API key (ak_live_...). Enter it above and save first.</span>';
+      return;
+    }
+
+    const modeIcon = mode === 'live' ? '🌐' : '🔬';
+    statusEl.innerHTML = `<span style="color:#f59e0b">⏳ Running ArmorIQ pipeline test (${mode} mode)...</span>`;
 
     try {
       // Send a mock plan to the service worker to exercise the full pipeline
@@ -333,10 +341,22 @@ function setupEventListeners() {
         const allowed = result.summary?.allowed || 0;
         const blocked = result.summary?.blocked || 0;
         const tokenId = result.intentTokenId || 'none';
+        const isLiveToken = tokenId.startsWith('it_live_');
+        const fellBack = mode === 'live' && !isLiveToken;
+
+        let sourceInfo = '';
+        if (fellBack) {
+          sourceInfo = '<div style="color:#f59e0b">⚠️ Live API failed — used mock fallback</div>';
+        } else if (mode === 'live') {
+          sourceInfo = '<div style="color:#10b981">🌐 Token from ArmorIQ cloud</div>';
+        } else {
+          sourceInfo = '<div style="color:#60a5fa">🔬 Token generated locally (mock)</div>';
+        }
 
         statusEl.innerHTML = `
-          <span style="color:#10b981">✅ ArmorIQ pipeline working (${mode} mode)</span>
+          <span style="color:#10b981">✅ ArmorIQ pipeline working ${modeIcon}</span>
           <div style="font-size:11px; margin-top:4px; color:#9ca3af; line-height:1.5;">
+            ${sourceInfo}
             <div>🔐 Method: <strong>${method}</strong></div>
             <div>🎫 Token: <code style="font-size:10px">${tokenId}</code></div>
             <div>✅ Allowed: ${allowed} | 🚫 Blocked: ${blocked}</div>

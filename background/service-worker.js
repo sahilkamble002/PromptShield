@@ -299,7 +299,7 @@ async function handleGetStatus(settings) {
     enabled: settings.enabled,
     lastScan: last,
     totalScans: scanHistory.length,
-    armorClawAvailable: !!settings.armorClawApiKey,
+    armorClawAvailable: (settings.armoriqMode || 'mock') === 'mock' || !!settings.armorClawApiKey,
     geminiAvailable: !!settings.geminiApiKey,
   };
 }
@@ -332,7 +332,9 @@ getSettings().then(s => {
   PS.log('─── PromptShield Startup Diagnostics ───');
   PS.log('  Shield enabled:', s.enabled);
   PS.log('  Gemini API key:', s.geminiApiKey ? '✅ SET (' + s.geminiApiKey.substring(0, 8) + '...)' : '❌ NOT SET');
-  PS.log('  ArmorClaw key:', s.armorClawApiKey ? '✅ SET' : '❌ NOT SET');
+  PS.log('  ArmorIQ mode:', s.armoriqMode || 'mock', '(local cryptographic verification)');
+  PS.log('  ArmorIQ proxy:', s.armoriqProxyEndpoint || 'https://customer-proxy.armoriq.ai');
+  PS.log('  ArmorIQ User ID:', s.armoriqUserId || '(default)');
   PS.log('  Block mode:', s.blockMode);
   PS.log('  Sensitivity:', s.sensitivity);
   PS.log('────────────────────────────────────────');

@@ -231,6 +231,10 @@ async function loadSettings() {
     document.getElementById('setting-xray').checked = s.xrayEnabled;
     document.getElementById('setting-gemini-key').value = s.geminiApiKey || '';
     document.getElementById('setting-armorclaw-key').value = s.armorClawApiKey || '';
+    document.getElementById('setting-armoriq-userid').value = s.armoriqUserId || '';
+    document.getElementById('setting-armoriq-agentid').value = s.armoriqAgentId || '';
+    document.getElementById('setting-armoriq-proxy').value = s.armoriqProxyEndpoint || 'https://customer-proxy.armoriq.ai';
+    document.getElementById('setting-armoriq-mode').value = s.armoriqMode || 'mock';
     document.getElementById('sensitivity-label').textContent = SENSITIVITY_LABELS[s.sensitivity] || 'Standard';
   } catch (e) {
     console.error('Failed to load settings:', e);
@@ -285,15 +289,65 @@ function setupEventListeners() {
   document.getElementById('save-keys').addEventListener('click', () => {
     const geminiKey = document.getElementById('setting-gemini-key').value.trim();
     const armorClawKey = document.getElementById('setting-armorclaw-key').value.trim();
-    saveSettings({ geminiApiKey: geminiKey, armorClawApiKey: armorClawKey });
+    const armoriqUserId = document.getElementById('setting-armoriq-userid').value.trim();
+    const armoriqAgentId = document.getElementById('setting-armoriq-agentid').value.trim();
+    const armoriqProxyEndpoint = document.getElementById('setting-armoriq-proxy').value.trim() || 'https://customer-proxy.armoriq.ai';
+    const armoriqMode = document.getElementById('setting-armoriq-mode').value || 'mock';
+    
+    saveSettings({
+      geminiApiKey: geminiKey,
+      armorClawApiKey: armorClawKey,
+      armoriqUserId: armoriqUserId,
+      armoriqAgentId: armoriqAgentId,
+      armoriqProxyEndpoint: armoriqProxyEndpoint,
+      armoriqMode: armoriqMode,
+    });
 
     const btn = document.getElementById('save-keys');
     btn.textContent = '✓ Saved!';
     btn.style.background = 'linear-gradient(135deg, #10b981, #22c55e)';
     setTimeout(() => {
-      btn.textContent = 'Save API Keys';
+      btn.textContent = 'Save All Keys';
       btn.style.background = '';
     }, 2000);
+  });
+
+  // Test ArmorIQ connection
+  document.getElementById('test-armoriq').addEventListener('click', async () => {
+    const statusEl = document.getElementById('armoriq-status');
+    const mode = document.getElementById('setting-armoriq-mode').value || 'mock';
+
+    statusEl.innerHTML = '<span style="color:#f59e0b">⏳ Running ArmorIQ pipeline test...</span>';
+
+    try {
+      // Send a mock plan to the service worker to exercise the full pipeline
+      const testPlan = [
+        { tool: 'read_file', args: { path: '/test/data.txt' }, reasoning: 'Read test data' },
+        { tool: 'write_file', args: { path: '/output.txt', content: 'result' }, reasoning: 'Write results' },
+      ];
+
+      const result = await chrome.runtime.sendMessage({ type: 'EXECUTE_PLAN', plan: testPlan });
+
+      if (result && !result.error) {
+        const method = result.verificationMethod || 'unknown';
+        const allowed = result.summary?.allowed || 0;
+        const blocked = result.summary?.blocked || 0;
+        const tokenId = result.intentTokenId || 'none';
+
+        statusEl.innerHTML = `
+          <span style="color:#10b981">✅ ArmorIQ pipeline working (${mode} mode)</span>
+          <div style="font-size:11px; margin-top:4px; color:#9ca3af; line-height:1.5;">
+            <div>🔐 Method: <strong>${method}</strong></div>
+            <div>🎫 Token: <code style="font-size:10px">${tokenId}</code></div>
+            <div>✅ Allowed: ${allowed} | 🚫 Blocked: ${blocked}</div>
+            <div>📊 Decision: <strong>${result.overallDecision}</strong></div>
+          </div>`;
+      } else {
+        statusEl.innerHTML = `<span style="color:#ef4444">❌ Pipeline error: ${result?.error || 'Unknown'}</span>`;
+      }
+    } catch (err) {
+      statusEl.innerHTML = `<span style="color:#ef4444">❌ Test failed: ${err.message}</span>`;
+    }
   });
 
   // Clear history

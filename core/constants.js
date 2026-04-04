@@ -115,7 +115,11 @@ const DEFAULT_SETTINGS = {
   soundEnabled: true,
   xrayEnabled: true,
   geminiApiKey: '',
-  armorClawApiKey: '',
+  armorClawApiKey: '',       // ArmorIQ API key (ak_live_...)
+  armoriqUserId: '',         // ArmorIQ user ID
+  armoriqAgentId: '',        // ArmorIQ agent ID
+  armoriqProxyEndpoint: 'https://customer-proxy.armoriq.ai',
+  armoriqMode: 'mock',       // 'mock' (local crypto) | 'live' (real API)
   maxAuditEntries: 1000,
 };
 

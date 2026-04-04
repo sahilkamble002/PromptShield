@@ -163,25 +163,67 @@
       </div>
 
       <div class="settings-group">
-        <h3 class="settings-title">API Keys</h3>
+        <h3 class="settings-title">Gemini AI</h3>
 
         <div class="setting-row vertical">
           <div class="setting-info">
             <span class="setting-label">Gemini API Key</span>
             <span class="setting-desc">Enable AI reasoning engine</span>
           </div>
-          <input type="password" id="setting-gemini-key" class="setting-input" placeholder="Enter Gemini API key...">
+          <input type="password" id="setting-gemini-key" class="setting-input" placeholder="AIzaSy...">
+        </div>
+      </div>
+
+      <div class="settings-group">
+        <h3 class="settings-title">ArmorIQ Verification</h3>
+
+        <div class="setting-row vertical">
+          <div class="setting-info">
+            <span class="setting-label">ArmorIQ API Key</span>
+            <span class="setting-desc">Enable cryptographic intent verification</span>
+          </div>
+          <input type="password" id="setting-armorclaw-key" class="setting-input" placeholder="ak_live_...">
         </div>
 
         <div class="setting-row vertical">
           <div class="setting-info">
-            <span class="setting-label">ArmorClaw API Key</span>
-            <span class="setting-desc">Enable token verification</span>
+            <span class="setting-label">User ID</span>
+            <span class="setting-desc">Your ArmorIQ user identifier</span>
           </div>
-          <input type="password" id="setting-armorclaw-key" class="setting-input" placeholder="Enter ArmorClaw API key...">
+          <input type="text" id="setting-armoriq-userid" class="setting-input" placeholder="test-user-001">
         </div>
 
-        <button class="btn-primary" id="save-keys">Save API Keys</button>
+        <div class="setting-row vertical">
+          <div class="setting-info">
+            <span class="setting-label">Agent ID</span>
+            <span class="setting-desc">Your ArmorIQ agent identifier</span>
+          </div>
+          <input type="text" id="setting-armoriq-agentid" class="setting-input" placeholder="promptshield-agent-001">
+        </div>
+
+        <div class="setting-row vertical">
+          <div class="setting-info">
+            <span class="setting-label">Proxy Endpoint</span>
+            <span class="setting-desc">ArmorIQ Proxy (for live mode)</span>
+          </div>
+          <input type="text" id="setting-armoriq-proxy" class="setting-input" placeholder="https://customer-proxy.armoriq.ai">
+        </div>
+
+        <div class="setting-row">
+          <div class="setting-info">
+            <span class="setting-label">Mode</span>
+            <span class="setting-desc">Mock = local crypto, Live = real API</span>
+          </div>
+          <select id="setting-armoriq-mode" class="setting-select">
+            <option value="mock">🔬 Mock (Local)</option>
+            <option value="live">🌐 Live (API)</option>
+          </select>
+        </div>
+
+        <div id="armoriq-status" class="armoriq-status"></div>
+
+        <button class="btn-primary" id="save-keys">Save All Keys</button>
+        <button class="btn-secondary" id="test-armoriq" style="margin-top: 6px; width: 100%;">🔐 Test ArmorIQ Pipeline</button>
       </div>
     </section>
 

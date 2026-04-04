@@ -1,4 +1,4 @@
-/**
+  /**
  * PromptShield — Content Script
  * Intercepts prompts on AI platforms, shows overlays, handles X-Ray mode
  */
@@ -436,15 +436,31 @@
       const tooltip = document.createElement('div');
       tooltip.className = 'ps-xray-tooltip';
       tooltip.innerHTML = `
-        <div class="ps-xray-header">🔍 X-Ray Mode</div>
-        ${findings.slice(0, 4).map(f => `
-          <div class="ps-xray-item">
+        <div class="ps-xray-header">🔍 X-Ray Mode <span style="font-size:9px; opacity:0.8; margin-left:4px">(Click to mask)</span></div>
+        ${findings.slice(0, 4).map((f, i) => `
+          <div class="ps-xray-item" data-index="${i}" title="Click to instantly mask this secret" style="cursor: pointer; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='transparent'">
             <span class="ps-xray-dot" style="background: ${getCategoryColor(f.category)}"></span>
             <span>${f.label}: <code>${truncate(f.maskedValue, 20)}</code></span>
           </div>
         `).join('')}
         ${findings.length > 4 ? `<div class="ps-xray-more">+${findings.length - 4} more</div>` : ''}
       `;
+
+      // Attach click handlers for instant masking
+      requestAnimationFrame(() => {
+        tooltip.querySelectorAll('.ps-xray-item').forEach(item => {
+          item.addEventListener('click', (e) => {
+            const index = parseInt(e.currentTarget.getAttribute('data-index'), 10);
+            const finding = findings[index];
+            if (finding && finding.fullMatch && finding.maskedValue) {
+              const currentText = platform.getPromptText(inputEl);
+              const newText = currentText.replace(finding.fullMatch, finding.maskedValue);
+              platform.setPromptText(inputEl, newText);
+              // Tooltip will naturally vanish/update because the prompt change triggers a new scan
+            }
+          });
+        });
+      });
 
       const rect = inputEl.getBoundingClientRect();
       tooltip.style.position = 'fixed';

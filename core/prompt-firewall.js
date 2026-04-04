@@ -56,7 +56,7 @@ function scanPrompt(text, options = {}) {
 
   // ── Phase 6: Generate masked text ─────────
   let maskedText = null;
-  if (options.enableMasking && findings.length > 0) {
+  if (findings.length > 0) {
     maskedText = generateMaskedText(text, findings);
   }
 

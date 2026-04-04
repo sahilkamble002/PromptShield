@@ -110,7 +110,10 @@ async function handleScanPrompt(message, sender, settings) {
   if (settings.geminiApiKey && message.isSubmit) {
     try {
       PS.log('🚀 SUBMIT detected — calling Gemini AI for execution plan analysis...');
-      const geminiResult = await PS.analyzeWithGemini(text, settings.geminiApiKey);
+      
+      // Data Privacy: Always send the MASKED text to Gemini so secrets never leave the device
+      const safeTextForGemini = scanResult.maskedText || text;
+      const geminiResult = await PS.analyzeWithGemini(safeTextForGemini, settings.geminiApiKey);
 
       if (geminiResult && geminiResult.plan) {
         // Parse the tool plan
